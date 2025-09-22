@@ -1,0 +1,53 @@
+---
+import { getCollection, type CollectionEntry } from "astro:content";
+import Layout from "~/layouts/PageLayout.astro";
+import SinglePost from "~/components/blog/SinglePost.astro";
+import ToBlogLink from "~/components/blog/ToBlogLink.astro";
+import RelatedPosts from "~/components/blog/RelatedPosts.astro";
+
+export const prerender = true;
+
+// ✅ Use content collections instead of utils/blog
+export async function getStaticPaths() {
+  const posts = await getCollection("post");
+  return posts.map((post) => ({
+    params: { blog: [post.slug] }, // 👈 matches `[...blog]`
+    props: { post },
+  }));
+}
+
+type Props = { post: CollectionEntry<"post"> };
+
+const { post } = Astro.props as Props;
+
+// ✅ Build metadata directly from schema
+const url = `/blog/${post.slug}`;
+const metadata = {
+  title: post.data.title,
+  description: post.data.excerpt,
+  robots: post.data.metadata?.robots ?? { index: true, follow: true },
+  openGraph: {
+    type: "article",
+    ...(post.data.image
+      ? {
+          images: [
+            {
+              url: post.data.image.src.src,
+              width: post.data.image.src.width,
+              height: post.data.image.src.height,
+            },
+          ],
+        }
+      : {}),
+  },
+  ...(post.data.metadata ?? {}),
+};
+---
+
+<Layout metadata={metadata}>
+  <SinglePost post={post} url={url}>
+    <post.Content />
+  </SinglePost>
+  <ToBlogLink />
+  <RelatedPosts post={post} />
+</Layout>
